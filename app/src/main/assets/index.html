@@ -514,15 +514,30 @@ Al final de cada respuesta con código incluye una línea:
             setTimeout(() => toast.remove(), 3000);
         }
 
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('✅ Copiado al portapapeles', 'success');
+            } catch(e) {
+                showToast('❌ Error al copiar', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
         function copyText(elementId) {
             const el = document.getElementById(elementId);
-            navigator.clipboard.writeText(el.innerText || el.textContent);
-            showToast('Copiado al portapapeles', 'success');
+            copyToClipboard(el.innerText || el.textContent);
         }
 
         function copyFullScript() {
-            navigator.clipboard.writeText(FULL_INSTALL_SCRIPT);
-            showToast('Script de instalación copiado', 'success');
+            copyToClipboard(FULL_INSTALL_SCRIPT);
         }
 
         function switchTab(pageId, tabElement) {
