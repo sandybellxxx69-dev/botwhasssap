@@ -525,7 +525,7 @@ Al final de cada respuesta con código incluye una línea:
                 <div style="background:#161b22; border:1px solid #30363d; 
                 border-radius:12px; padding:20px; width:100%; max-width:400px;">
                 <p style="color:#e6edf3; margin:0 0 12px; font-weight:600;">${title}</p>
-                <textarea id="copy-modal-text" readonly style="
+                <textarea id="copy-modal-text" style="
                     width:100%; height:160px; background:#0d1117; color:#3fb950;
                     border:1px solid #30363d; border-radius:8px; padding:10px;
                     font-family:'JetBrains Mono',monospace; font-size:12px;
@@ -549,11 +549,22 @@ Al final de cada respuesta con código incluye una línea:
 
         function copyText(elementId, title = 'Copia este texto') {
             const el = document.getElementById(elementId);
-            showCopyModal(el.innerText || el.textContent, title);
+            const textToCopy = el.innerText || el.textContent;
+            if (window.Android && window.Android.copyToClipboard) {
+                window.Android.copyToClipboard(textToCopy);
+                showToast('✅ Copiado al portapapeles', 'success');
+            } else {
+                showCopyModal(textToCopy, title);
+            }
         }
 
         function copyFullScript() {
-            showCopyModal(FULL_INSTALL_SCRIPT, '📋 Script de instalación');
+            if (window.Android && window.Android.copyToClipboard) {
+                window.Android.copyToClipboard(FULL_INSTALL_SCRIPT);
+                showToast('✅ Script de instalación copiado', 'success');
+            } else {
+                showCopyModal(FULL_INSTALL_SCRIPT, '📋 Script de instalación');
+            }
         }
 
         function switchTab(pageId, tabElement) {

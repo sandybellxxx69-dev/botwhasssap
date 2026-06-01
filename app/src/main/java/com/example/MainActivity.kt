@@ -2,7 +2,11 @@ package com.example
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
+import android.webkit.JavascriptInterface
 import android.webkit.PermissionRequest
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -18,6 +22,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.ui.theme.MyApplicationTheme
+
+class WebAppInterface(private val mContext: Context) {
+    @JavascriptInterface
+    fun copyToClipboard(text: String) {
+        val clipboard = mContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Copied Text", text)
+        clipboard.setPrimaryClip(clip)
+    }
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -50,6 +63,7 @@ class MainActivity : ComponentActivity() {
                                         request.grant(request.resources)
                                     }
                                 }
+                                addJavascriptInterface(WebAppInterface(context), "Android")
                                 loadUrl("file:///android_asset/index.html")
                             }
                         },
