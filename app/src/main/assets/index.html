@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BotForge - WhatsApp Bot Builder</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0d1117;
+            --bg-card: #161b22;
+            --border-color: #30363d;
+            --accent-green: #3fb950;
+            --accent-blue: #58a6ff;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --font-ui: 'Inter', sans-serif;
+            --font-code: 'JetBrains Mono', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: var(--font-ui);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.5;
+            padding-top: 52px;
+            padding-bottom: 60px;
+        }
+
+        /* Header Global */
+        header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 52px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+        }
+        
+        .header-title {
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .server-status {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #f85149;
+        }
+        .status-dot.online {
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(63, 185, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(63, 185, 80, 0); }
+        }
+
+        /* Navigation Bottom */
+        nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 60px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            z-index: 1000;
+        }
+
+        .tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            color: var(--accent-green);
+            border-bottom: 2px solid var(--accent-green);
+        }
+
+        /* Container */
+        .page { display: none; padding: 16px; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Typography & Components */
+        h2 { font-size: 18px; margin-bottom: 12px; font-weight: 600; }
+        h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-secondary); }
+        p { font-size: 14px; margin-bottom: 12px; color: var(--text-secondary); }
+        a { color: var(--accent-blue); text-decoration: none; }
+        
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        
+        .btn:active { opacity: 0.8; }
+        .btn-primary { background: var(--accent-blue); color: #fff; border: none; }
+        .btn-success { background: var(--accent-green); color: #000; border: none; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 4px; width: auto; }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            background: #0d1117;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 12px;
+            outline: none;
+        }
+        input:focus, textarea:focus { border-color: var(--accent-blue); }
+
+        pre {
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: var(--font-code);
+            font-size: 12px;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            margin-bottom: 12px;
+        }
+
+        /* Toast Container */
+        #toast-container {
+            position: fixed;
+            top: 60px; right: 16px; left: 16px;
+            display: flex; flex-direction: column; gap: 8px;
+            z-index: 1100; pointer-events: none;
+        }
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            animation: slideDown 0.3s forwards;
+            border-left: 4px solid var(--accent-blue);
+            color: #fff;
+        }
+        .toast-success { border-left-color: var(--accent-green); }
+        .toast-error { border-left-color: #f85149; }
+        
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Pairing Code Banner */
+        .pairing-card {
+            border: 1px dashed var(--accent-blue);
+            background: rgba(88, 166, 255, 0.1);
+            text-align: center;
+        }
+        .pairing-code { font-family: var(--font-code); font-size: 24px; font-weight: bold; margin: 16px 0; color: var(--accent-blue); letter-spacing: 2px;}
+
+        /* Chat UI */
+        .chat-container {
+            display: flex; flex-direction: column; height: calc(100vh - 112px); /* Header+Nav */
+            padding: 0;
+            margin-top: -16px; /* Reset default padding */
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px; padding-bottom: 24px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .chat-input-area {
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 16px;
+            display: flex; gap: 8px; align-items: center;
+        }
+        .chat-input-area input { margin: 0; flex: 1; }
+        
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; word-break: break-word; }
+        .msg-system { align-self: center; background: #000; color: var(--text-secondary); text-align: center; max-width: 90%; border: 1px dashed var(--border-color); }
+        .msg-user { align-self: flex-end; background: var(--accent-blue); color: #fff; border-bottom-right-radius: 4px; }
+        .msg-model { align-self: flex-start; background: #21262d; border-bottom-left-radius: 4px; }
+        
+        .code-container { margin-top: 8px; position: relative; }
+        .code-container pre { margin-bottom: 8px; }
+        
+        .btn-icon { width: 44px; height: 44px; flex-shrink: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #21262d; border: 1px solid var(--border-color); cursor: pointer; color: white;}
+        .btn-icon.recording { background: #f85149; border-color: #f85149; animation: pulseRed 1s infinite; }
+        @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(248,81,73,0.4); } 70% { box-shadow: 0 0 0 6px rgba(248,81,73,0); } }
+
+        .quick-replies-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .qr-item { display: flex; gap: 8px; align-items: center; background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;}
+        .qr-item span { flex: 1; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">⚡ BotForge</div>
+        <div class="server-status" id="serverStatusHeader">
+            <div class="status-dot" id="serverDot"></div>
+            <span id="serverText">Sin servidor</span>
+        </div>
+    </header>
+
+    <div id="toast-container"></div>
+
+    <!-- PANTALLA 1: SETUP -->
+    <main id="page-setup" class="page active">
+        <div class="section-card">
+            <h2>Paso 1 — Instalar Termux</h2>
+            <p>Descarga Termux desde F-Droid (NO desde Play Store, está desactualizado)</p>
+            <a href="https://f-droid.org/en/packages/com.termux/" target="_blank" class="btn btn-primary">🔗 Descargar Termux desde F-Droid</a>
+        </div>
+
+        <div class="section-card">
+            <h2>Paso 2 — Instalar el servidor del bot</h2>
+            <p>Copia este comando y pégalo en Termux:</p>
+            <pre id="setup-cmd-1">curl -sL https://raw.githubusercontent.com/botforge-app/setup/main/install.sh | bash</pre>
+            <button class="btn btn-sm" onclick="copyText('setup-cmd-1')">📋 Copiar</button>
+            <div style="margin: 16px 0;text-align: center; color: var(--text-secondary);font-size: 12px;">o bien</div>
+            <button class="btn" onclick="copyFullScript()">📋 Copiar instalación manual</button>
+        </div>
+
+        <div class="section-card">
+            <h2>Paso 3 — Iniciar el servidor</h2>
+            <p>Cada vez que reinicies tu teléfono, abre Termux y ejecuta:</p>
+            <pre id="setup-cmd-2">cd ~/botforge && node server.js</pre>
+            <button class="btn btn-sm" onclick="copyText('setup-cmd-2')">📋 Copiar</button>
+        </div>
+
+        <div class="section-card" style="text-align: center; border-color: var(--accent-green); background: rgba(63, 185, 80, 0.05);">
+            <button class="btn btn-success" onclick="checkServer()">🔍 Verificar que Termux está corriendo</button>
+            <p id="verify-result" style="margin-top: 12px; margin-bottom: 0; font-weight: 500;"></p>
+        </div>
+    </main>
+
+    <!-- PANTALLA 2: CONECTAR -->
+    <main id="page-connect" class="page">
+        <div class="section-card">
+            <h2>Conectar con WhatsApp</h2>
+            <label>Número de WhatsApp (con código país, ej 52...):</label>
+            <input type="tel" id="input-phone" placeholder="Ej: +52 1 55 1234 5678">
+            
+            <label>Nombre del bot:</label>
+            <input type="text" id="input-botname" placeholder="Mi Bot" value="Mi Bot">
+
+            <label>API Key de Gemini:</label>
+            <input type="password" id="input-geminikey" placeholder="AIza...">
+            <p style="font-size: 11px; margin-top: -8px;"><a href="https://aistudio.google.com" target="_blank">¿No tienes API Key? → Obtenerla gratis en aistudio.google.com</a></p>
+
+            <label>Prefijo comandos:</label>
+            <input type="text" id="input-prefix" placeholder="!" value="!">
+
+            <button class="btn btn-primary" id="btn-connect" onclick="startConnection()">🔗 Conectar WhatsApp</button>
+        </div>
+
+        <div id="pairing-container" class="section-card pairing-card" style="display: none;">
+            <h3>Tu código de emparejamiento:</h3>
+            <div class="pairing-code" id="pairing-code-text">---- - ----</div>
+            <p>1. Abre WhatsApp en tu celular<br>2. Menú → Dispositivos vinculados<br>3. Vincular con número de teléfono<br>4. Ingresa el código de arriba</p>
+        </div>
+
+        <div class="section-card">
+            <h3>Estado actual</h3>
+            <p id="connect-status-text">● Desconectado</p>
+        </div>
+    </main>
+
+    <!-- PANTALLA 3: DISEÑAR BOT -->
+    <main id="page-design" class="page" style="padding:0">
+        <div class="chat-container">
+            
+            <div style="background: var(--bg-card); padding: 16px; border-bottom: 1px solid var(--border-color);">
+                <h3 style="margin-top: 0;">Respuestas automáticas</h3>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="qr-trigger" placeholder="Si dice..." style="margin: 0; min-width: 0;">
+                    <input type="text" id="qr-reply" placeholder="Responder..." style="margin: 0; min-width: 0;">
+                    <button class="btn btn-sm" onclick="addQuickReply()" style="flex-shrink: 0;">+ Agr</button>
+                </div>
+                <div class="quick-replies-list" id="qr-list"></div>
+            </div>
+
+            <div class="chat-messages" id="chat">
+                <!-- Welcome -->
+                <div class="msg msg-system text-left">
+                    <b>🤖 Asistente de IA — Describe cómo quieres tu bot</b><br><br>
+                    ¡Hola! 👋 Soy tu asistente para construir el bot.<br>
+                    Cuéntame qué quieres que haga tu bot de WhatsApp.
+                    Puedes escribir o usar el micrófono 🎤<br><br>
+                    Ejemplos:<br>
+                    - "Quiero un menú con mis servicios y precios"<br>
+                    - "Que responda preguntas frecuentes de mi negocio"<br>
+                    - "Un bot que tome pedidos con nombre y dirección"
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <button class="btn-icon" id="btn-voice" onclick="toggleVoice()">🎤</button>
+                <input type="text" id="chat-input" placeholder="Escribe o habla para describir tu bot..." onkeypress="if(event.key === 'Enter') sendChat()">
+                <button class="btn-icon btn-primary" onclick="sendChat()" style="color:white; border:none;">↗</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- PANTALLA 4: CÓDIGO -->
+    <main id="page-code" class="page">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <p style="margin: 0;">📄 server.js</p>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm" onclick="copyText('source-code-view')">📋 Copiar</button>
+                <button class="btn btn-sm" onclick="downloadCode()">⬇️ Descargar</button>
+            </div>
+        </div>
+        <pre id="source-code-view" style="max-height: calc(100vh - 200px); overflow-y: auto;">Cargando código...</pre>
+    </main>
+
+    <nav>
+        <div class="tab active" onclick="switchTab('setup', this)"><span>⚙️</span>Setup</div>
+        <div class="tab" onclick="switchTab('connect', this)"><span>🔗</span>Conectar</div>
+        <div class="tab" onclick="switchTab('design', this)"><span>🤖</span>Diseñar Bot</div>
+        <div class="tab" onclick="switchTab('code', this)"><span>📄</span>Código</div>
+    </nav>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let serverOnline = false;
+        let botConnected = false;
+        let botConfig = { name: 'Mi Bot', prefix: '!', geminiKey: '', responses: [] };
+        let conversationHistory = [];
+        let pollingInterval = null;
+
+        const FULL_INSTALL_SCRIPT = `pkg update -y && pkg upgrade -y
+pkg install -y nodejs git
+npm install -g npm
+mkdir -p ~/botforge && cd ~/botforge
+npm init -y
+npm install @whiskeysockets/baileys @hapi/boom express cors qrcode-terminal
+cat > server.js << 'SERVEREOF'
+const express = require('express');
+const cors = require('cors');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { Boom } = require('@hapi/boom');
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+let sock = null;
+let botStatus = 'disconnected';
+let pairingCode = null;
+let botConfig = { name: 'Mi Bot', prefix: '!', geminiKey: '', responses: [] };
+
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+  sock = makeWASocket({ auth: state, printQRInTerminal: false });
+  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'open') { botStatus = 'connected'; pairingCode = null; }
+    if (connection === 'close') {
+      botStatus = 'disconnected';
+      const shouldReconnect = (lastDisconnect?.error instanceof Boom)
+        ? lastDisconnect.error.output?.statusCode !== DisconnectReason.loggedOut : true;
+      if (shouldReconnect) setTimeout(startBot, 3000);
+    }
+  });
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.fromMe) return;
+    const from = msg.key.remoteJid;
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || '';
+    
+    try {
+        const fs = require('fs');
+        if(fs.existsSync('./bot-logic.js')){
+           require('./bot-logic.js')({ sock, msg, from, text, botConfig });
+           return;
+        }
+    } catch(e) {}
+
+    // Respuestas automáticas config
+    for (const r of botConfig.responses) {
+      if (text.toLowerCase().includes(r.trigger.toLowerCase())) {
+        await sock.sendMessage(from, { text: r.reply });
+        return;
+      }
+    }
+    // Gemini
+    if (botConfig.geminiKey && text.trim()) {
+      try {
+        const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=\${botConfig.geminiKey}\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: text }] }] })
+        });
+        const data = await res.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (reply) await sock.sendMessage(from, { text: reply });
+      } catch(e) { console.error('Gemini error:', e); }
+    }
+  });
+  return sock;
+}
+
+app.get('/status', (req, res) => res.json({ status: botStatus, pairingCode }));
+app.post('/connect', async (req, res) => {
+  const { phone } = req.body;
+  try {
+    await startBot();
+    setTimeout(async () => {
+      if (sock && botStatus !== 'connected') {
+        const code = await sock.requestPairingCode(phone.replace(/\\D/g,''));
+        pairingCode = code;
+        res.json({ success: true, code });
+      } else {
+        res.json({ success: true, status: botStatus });
+      }
+    }, 3000);
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+app.post('/config', (req, res) => {
+  botConfig = { ...botConfig, ...req.body };
+  require('fs').writeFileSync('config.json', JSON.stringify(botConfig));
+  res.json({ success: true });
+});
+app.get('/config', (req, res) => res.json(botConfig));
+app.post('/update-bot', (req, res) => {
+  const { code } = req.body;
+  const wrappedCode = \`module.exports = async function({sock, msg, from, text, botConfig}) {\\n\${code}\\n};\`;
+  require('fs').writeFileSync('bot-logic.js', wrappedCode);
+  res.json({ success: true, message: 'Código actualizado. Reinicia el bot para aplicar cambios.' });
+});
+app.get('/get-code', (req, res) => {
+    try {
+        const code = require('fs').readFileSync('bot-logic.js', 'utf8');
+        res.send(code);
+    } catch(e) { res.send("// Todavía no hay código personalizado aplicado"); }
+});
+app.listen(3000, () => console.log('🟢 BotForge Server corriendo en puerto 3000'));
+SERVEREOF
+echo "✅ Instalación completada. Ejecuta: node server.js"`;
+
+        const SYSTEM_PROMPT = \`Eres un experto en bots de WhatsApp con Baileys (Node.js).
+Ayudas al usuario a construir su bot paso a paso.
+Responde SIEMPRE en español.
+Cuando generes código, usa bloques \`\`\`javascript.
+El servidor ya está corriendo en Express en puerto 3000.
+La lógica del bot va dentro del evento messages.upsert.
+Estructura base del handler de mensajes (ASUME QUE TIENES ESTAS VARIABLES ACCESIBLES: sock, msg, from, text, botConfig):
+
+// EL CÓDIGO QUE GENERES REEMPLAZARÁ EL INTERIOR DEL HANDLER:
+// TU LÓGICA AQUÍ (puedes usar sock.sendMessage, revisar text, etc)
+
+Tipos de bots que puedes crear:
+- Menús numerados interactivos
+- Respuestas por palabras clave  
+- Bot con IA (Gemini) que responde cualquier cosa
+- Sistema de pedidos con nombre, dirección, producto
+- Horarios de atención automáticos
+- Bienvenida automática en grupos
+- Catálogo de productos con precios
+- Sistema de citas/reservaciones
+- FAQ automático
+Al final de cada respuesta con código incluye una línea:
+"✅ Haz clic en 'Aplicar código' para activar esto en tu bot"\`;
+
+        // Utils
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = \`toast toast-\${type}\`;
+            toast.textContent = message;
+            document.getElementById('toast-container').appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function copyText(elementId) {
+            const el = document.getElementById(elementId);
+            navigator.clipboard.writeText(el.innerText || el.textContent);
+            showToast('Copiado al portapapeles', 'success');
+        }
+
+        function copyFullScript() {
+            navigator.clipboard.writeText(FULL_INSTALL_SCRIPT);
+            showToast('Script de instalación copiado', 'success');
+        }
+
+        function switchTab(pageId, tabElement) {
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            tabElement.classList.add('active');
+
+            if (pageId === 'code') fetchCodeView();
+            if (pageId === 'design') {
+                const c = document.getElementById('chat');
+                c.scrollTop = c.scrollHeight;
+            }
+        }
+
+        // Storage
+        function loadStorage() {
+            if (localStorage.getItem('bf_phone')) document.getElementById('input-phone').value = localStorage.getItem('bf_phone');
+            if (localStorage.getItem('bf_botname')) document.getElementById('input-botname').value = localStorage.getItem('bf_botname');
+            if (localStorage.getItem('bf_gemini')) {
+                document.getElementById('input-geminikey').value = localStorage.getItem('bf_gemini');
+                botConfig.geminiKey = localStorage.getItem('bf_gemini');
+            }
+            if (localStorage.getItem('bf_prefix')) document.getElementById('input-prefix').value = localStorage.getItem('bf_prefix');
+            
+            try {
+                const rs = localStorage.getItem('bf_responses');
+                if(rs) { botConfig.responses = JSON.parse(rs); renderQuickReplies(); }
+            } catch(e) {}
+            
+            try {
+                const ch = localStorage.getItem('bf_history');
+                if(ch) {
+                    conversationHistory = JSON.parse(ch);
+                    conversationHistory.forEach(item => {
+                        const role = item.role === 'user' ? 'msg-user' : 'msg-model';
+                        const text = item.parts[0].text;
+                        appendMessageHTML(text, role);
+                    });
+                }
+            } catch(e) {}
+        }
+
+        function saveConfigLocal() {
+            localStorage.setItem('bf_phone', document.getElementById('input-phone').value);
+            localStorage.setItem('bf_botname', document.getElementById('input-botname').value);
+            localStorage.setItem('bf_gemini', document.getElementById('input-geminikey').value);
+            localStorage.setItem('bf_prefix', document.getElementById('input-prefix').value);
+            localStorage.setItem('bf_responses', JSON.stringify(botConfig.responses));
+        }
+
+        // Server Check & Global Polling
+        async function fetchTimeout(url, options = {}, timeout = 5000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            const response = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(id);
+            return response;
+        }
+
+        async function checkServer() {
+            const p = document.getElementById('verify-result');
+            p.textContent = 'Verificando...'; p.style.color = 'inherit';
+            try {
+                const r = await fetchTimeout(API_URL + '/status', {}, 3000);
+                const data = await r.json();
+                p.textContent = \`✅ Servidor activo — Bot: \${data.status}\`;
+                p.style.color = 'var(--accent-green)';
+                updateHeaderStatus(true, data.status);
+            } catch (e) {
+                p.textContent = '❌ Termux no está corriendo. Sigue los pasos de arriba.';
+                p.style.color = '#f85149';
+                updateHeaderStatus(false, 'disconnected');
+            }
+        }
+
+        function updateHeaderStatus(isOnline, status) {
+            serverOnline = isOnline;
+            botConnected = status === 'connected';
+            const dot = document.getElementById('serverDot');
+            const txt = document.getElementById('serverText');
+            
+            if (isOnline) {
+                dot.classList.add('online');
+                txt.textContent = 'Servidor activo';
+                txt.style.color = 'var(--accent-green)';
+            } else {
+                dot.classList.remove('online');
+                txt.textContent = 'Sin servidor';
+                txt.style.color = 'var(--text-secondary)';
+            }
+
+            const cText = document.getElementById('connect-status-text');
+            if (!isOnline) {
+                cText.textContent = '● Termux offline';
+                cText.style.color = '#f85149';
+            } else if (botConnected) {
+                cText.textContent = '● Conectado ✅';
+                cText.style.color = 'var(--accent-green)';
+                document.getElementById('pairing-container').style.display = 'none';
+                if(pollingInterval) clearInterval(pollingInterval);
+            } else if (status === 'disconnected') {
+                cText.textContent = '● Desconectado';
+                cText.style.color = 'var(--text-secondary)';
+            } else {
+                 cText.textContent = \`● \${status}\`;
+            }
+        }
+
+        setInterval(async () => {
+            try {
+                const r = await fetchTimeout(API_URL + '/status', {}, 2000);
+                const data = await r.json();
+                updateHeaderStatus(true, data.status);
+                
+                if (data.pairingCode && data.status !== 'connected') {
+                    document.getElementById('pairing-container').style.display = 'block';
+                    document.getElementById('pairing-code-text').textContent = data.pairingCode.match(/.{1,4}/g).join(' - ');
+                } else {
+                    document.getElementById('pairing-container').style.display = 'none';
+                }
+            } catch {
+                updateHeaderStatus(false, 'disconnected');
+            }
+        }, 10000);
+
+        // Connection
+        async function startConnection() {
+            saveConfigLocal();
+            const phone = document.getElementById('input-phone').value;
+            const botname = document.getElementById('input-botname').value;
+            const geminikey = document.getElementById('input-geminikey').value;
+            const prefix = document.getElementById('input-prefix').value;
+
+            if (!phone) { showToast('Ingresa número de WhatsApp', 'error'); return; }
+            if (!serverOnline) { showToast('Servidor no activo, revisa Termux', 'error'); return; }
+
+            const btn = document.getElementById('btn-connect');
+            btn.innerHTML = '⏳ Conectando...'; btn.disabled = true;
+
+            try {
+                // Actualizar config
+                await fetchTimeout(API_URL + '/config', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ name: botname, geminiKey: geminikey, prefix: prefix, responses: botConfig.responses })
+                });
+
+                // Iniciar conexión
+                const r = await fetchTimeout(API_URL + '/connect', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ phone })
+                }, 10000); // 10 sec due to QR code request
+                
+                const data = await r.json();
+                if (data.success) {
+                    if (data.code) {
+                        document.getElementById('pairing-container').style.display = 'block';
+                        document.getElementById('pairing-code-text').textContent = data.code.match(/.{1,4}/g).join(' - ');
+                        showToast('Ingresa el código en WhatsApp', 'info');
+                    } else if (data.status === 'connected') {
+                        showToast('🟢 ¡Bot conectado exitosamente!', 'success');
+                    }
+                    startPollingStatus();
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (e) {
+                showToast('Error conectando: ' + e.message, 'error');
+            }
+            btn.innerHTML = '🔗 Conectar WhatsApp'; btn.disabled = false;
+        }
+
+        function startPollingStatus() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(async () => {
+                if(!serverOnline) return;
+                try {
+                    const r = await fetchTimeout(API_URL + '/status', {}, 2000);
+                    const data = await r.json();
+                    updateHeaderStatus(true, data.status);
+                    if (data.status === 'connected') clearInterval(pollingInterval);
+                } catch(e){}
+            }, 3000);
+        }
+
+        // Quick Replies
+        async function addQuickReply() {
+            const trigger = document.getElementById('qr-trigger').value.trim();
+            const reply = document.getElementById('qr-reply').value.trim();
+            if(!trigger || !reply) return;
+
+            botConfig.responses.push({ trigger, reply });
+            document.getElementById('qr-trigger').value = '';
+            document.getElementById('qr-reply').value = '';
+            renderQuickReplies();
+            saveConfigLocal();
+            await syncConfig();
+        }
+
+        function renderQuickReplies() {
+            const list = document.getElementById('qr-list');
+            list.innerHTML = '';
+            botConfig.responses.forEach((r, idx) => {
+                const el = document.createElement('div'); el.className = 'qr-item';
+                el.innerHTML = \`<span><b>\${r.trigger}</b> → \${r.reply}</span> <button class="btn btn-sm" onclick="delQuickReply(\${idx})">🗑️</button>\`;
+                list.appendChild(el);
+            });
+        }
+
+        async function delQuickReply(idx) {
+            botConfig.responses.splice(idx, 1);
+            renderQuickReplies();
+            saveConfigLocal();
+            await syncConfig();
+        }
+
+        async function syncConfig() {
+            if(!serverOnline) return;
+            try {
+                await fetchTimeout(API_URL + '/config', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(botConfig)
+                });
+            } catch(e){}
+        }
+
+        // Chat & Gemini
+        function formatCodeBlocks(text) {
+            return text.replace(/\`\`\`javascript([\\s\\S]*?)\`\`\`/gi, function(match, p1) {
+                let encoded = p1.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                let highlighted = encoded
+                    .replace(/\\b(const|let|var|function|async|await|if|else|return|for|while|switch|case|break)\\b/g, '<span style="color:#58a6ff">$1</span>')
+                    .replace(/('.*?'|".*?"|\`[\\s\\S]*?\`)/g, '<span style="color:#3fb950">$1</span>')
+                    .replace(/(\\w+)\\s*(?=\\()/g, '<span style="color:#d2a8ff">$1</span>')
+                    .replace(/(\\/\\/.*)/g, '<span style="color:#8b949e">$1</span>')
+                    .replace(/\\b(\\d+)\\b/g, '<span style="color:#e3b341">$1</span>');
+                return \`<div class="code-container"><pre><code>\${highlighted}</code></pre>
+                        <button class="btn btn-sm btn-success apply-btn" onclick="applyCode(this)" data-code="\${encodeURIComponent(p1)}">📥 Aplicar este código al bot</button></div>\`;
+            });
+        }
+
+        function formatMarkdown(text) {
+            let html = formatCodeBlocks(text);
+            html = html.replace(/\\*\\*(.*?)\\*\\*/g, '<b>$1</b>');
+            html = html.replace(/\\n/g, '<br>');
+            return html;
+        }
+
+        function appendMessageHTML(text, roleClass) {
+            const c = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = \`msg \${roleClass}\`;
+            div.innerHTML = roleClass === 'msg-model' ? formatMarkdown(text) : text;
+            c.appendChild(div);
+            c.scrollTop = c.scrollHeight;
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text) return;
+            
+            const apiKey = document.getElementById('input-geminikey').value;
+            if(!apiKey) { showToast('Configura tu API Key de Gemini en la pestaña Conectar', 'error'); return; }
+
+            // Add UI
+            appendMessageHTML(text, 'msg-user');
+            input.value = '';
+            
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'msg msg-model';
+            typingDiv.textContent = 'Escribiendo...';
+            document.getElementById('chat').appendChild(typingDiv);
+            document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+
+            conversationHistory.push({ role: 'user', parts: [{ text: text }] });
+
+            try {
+                const response = await fetch(
+                    \`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=\${apiKey}\`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                            contents: conversationHistory
+                        })
+                    }
+                );
+                const data = await response.json();
+                
+                if (data.error) throw new Error(data.error.message);
+                
+                const reply = data.candidates[0].content.parts[0].text;
+                conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+                
+                typingDiv.remove();
+                appendMessageHTML(reply, 'msg-model');
+                
+                localStorage.setItem('bf_history', JSON.stringify(conversationHistory));
+
+            } catch (e) {
+                typingDiv.remove();
+                showToast('Error Gemini: ' + e.message, 'error');
+                conversationHistory.pop(); // Revert user message
+            }
+        }
+
+        // Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isRecording = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'es-MX';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            
+            recognition.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                document.getElementById('chat-input').value = transcript;
+            };
+            recognition.onend = () => {
+                isRecording = false;
+                document.getElementById('btn-voice').classList.remove('recording');
+            };
+            recognition.onerror = (e) => {
+                showToast('Error de micrófono: ' + e.error, 'error');
+                isRecording = false;
+                document.getElementById('btn-voice').classList.remove('recording');
+            }
+        }
+
+        function toggleVoice() {
+            if (!SpeechRecognition) {
+                showToast('Tu navegador no soporta voz. Escribe tu mensaje.', 'error');
+                return;
+            }
+            if (!isRecording) {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('btn-voice').classList.add('recording');
+            } else {
+                recognition.stop();
+            }
+        }
+
+        // Apply Code to Node Server
+        async function applyCode(btnObj) {
+            const code = decodeURIComponent(btnObj.getAttribute('data-code'));
+            if (!serverOnline) { showToast('El servidor debe estar activo para aplicar código', 'error'); return; }
+            
+            btnObj.innerHTML = '⏳ Aplicando...'; btnObj.disabled = true;
+            try {
+                const r = await fetchTimeout(API_URL + '/update-bot', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ code })
+                });
+                const data = await r.json();
+                if(data.success) {
+                    showToast('✅ Código aplicado. Ve a Termux: Ctrl+C y luego node server.js', 'success');
+                    btnObj.innerHTML = '✅ Aplicado (Requiere reinicio)';
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                    btnObj.innerHTML = '📥 Aplicar este código al bot'; btnObj.disabled = false;
+                }
+            } catch(e) {
+                showToast('Error red: ' + e.message, 'error');
+                btnObj.innerHTML = '📥 Aplicar este código al bot'; btnObj.disabled = false;
+            }
+        }
+
+        // Code Viewer
+        async function fetchCodeView() {
+            const pre = document.getElementById('source-code-view');
+            try {
+                if(!serverOnline) throw new Error('offline');
+                const r = await fetchTimeout(API_URL + '/get-code', {}, 3000);
+                const code = await r.text();
+                pre.innerHTML = code.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                                    .replace(/\\b(const|let|var|function|async|await|if|return)\\b/g, '<span style="color:#58a6ff">$1</span>')
+                                    .replace(/('.*?'|".*?"|\`[\\s\\S]*?\`)/g, '<span style="color:#3fb950">$1</span>')
+                                    .replace(/(\\/\\/.*)/g, '<span style="color:#8b949e">$1</span>');
+            } catch(e) {
+                pre.textContent = "// No se pudo cargar desde el servidor local. Este es el script base:\n\n" + FULL_INSTALL_SCRIPT;
+            }
+        }
+
+        function downloadCode() {
+            const content = document.getElementById('source-code-view').innerText;
+            const blob = new Blob([content], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'bot-logic.js';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStorage();
+            setTimeout(checkServer, 1000);
+        });
+    </script>
+</body>
+</html>

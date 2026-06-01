@@ -1,0 +1,6 @@
+{
+  "name": "BotForge",
+  "description": "WhatsApp Bot Builder con Baileys, Termux y Gemini IA",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
